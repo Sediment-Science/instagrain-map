@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Free Case Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    #map { width: 100%; height: 80vh; border: 1px solid #ccc; }
+.legend {
+  background: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  font-family: sans-serif;
+  line-height: 1.2em;
+}
+  </style>
+</head>
+<body>
+<div style="padding: 1em; font-family: sans-serif;">
+  <h2>Median Grain Size</h2>
+  <p>This map shows locations with median grain size (D50) - in mm - measured with Instagrain, our instant grain size camera. 
+    Most locations are located on beaches, but some rivers and deserts are also included. 
+    Click on each location dot to view details.</p>
+  <p><a href="data.csv" download> You can download underlying CSV data here</a></p>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([20, 0], 2);  // Centered globally
+
+  // Use free OpenStreetMap tiles
+  /*
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  */
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://carto.com/">CARTO</a> contributors &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  subdomains: 'abcd'
+}).addTo(map);
+
+  // Load and parse data.csv, convert to GeoJSON, and render
+  Papa.parse('data.csv', {
+    download: true,
+    header: true,
+    complete: function(results) {
+      const rows = results.data.filter(row => row.latitude && row.longitude && row.D50);
+      const features = rows.map((row, i) => ({
+        type: "Feature",
+        properties: {
+          D50: parseFloat(row.D50),
+          id: i
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [parseFloat(row.longitude), parseFloat(row.latitude)]
+        }
+      }));
+
+      const geojson = {
+        type: "FeatureCollection",
+        features: features
+      };
+
+      renderMap(geojson);
+    }
+  });
+
+  function renderMap(data) {
+    const values = data.features.map(f => f.properties.D50);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+
+    function getColor(val) {
+      const t = (val - minVal) / (maxVal - minVal);
+      const r = Math.round(255);
+      const g = Math.round(255 - t * 165);
+      const b = Math.round(0 + t * 50);
+      return `rgb(${r},${g},${b})`;
+    }
+
+    L.geoJSON(data, {
+      pointToLayer: function (feature, latlng) {
+        const color = getColor(feature.properties.D50);
+        return L.circleMarker(latlng, {
+          radius: 6,
+          fillColor: color,
+          color: 'transparent',
+          weight: 0,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
+      },
+      onEachFeature: function (feature, layer) {
+        const val = feature.properties.D50.toFixed(2);
+        layer.bindPopup(`<strong>Value:</strong> ${val}`);
+      }
+    }).addTo(map);
+
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function () {
+      const div = L.DomUtil.create('div', 'legend');
+      div.innerHTML = `
+        <div style="font-size: 12px; margin-bottom: 4px;">D50 (mm)</div>
+        <div style="background: linear-gradient(to right, rgb(255,255,0), rgb(255,90,50)); width: 150px; height: 10px;"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px;">
+          <span>${minVal.toFixed(2)}</span><span>${maxVal.toFixed(2)}</span>
+        </div>`;
+      return div;
+    };
+    legend.addTo(map);
+  }
+</script>
+</body>
+</html>
