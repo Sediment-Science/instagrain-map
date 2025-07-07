@@ -40,7 +40,8 @@
   */
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; <a href="https://carto.com/">CARTO</a> contributors &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  subdomains: 'abcd'
+  subdomains: 'abcd',
+  noWrap: true
 }).addTo(map);
 
   // Load and parse data.csv, convert to GeoJSON, and render
