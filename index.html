@@ -97,7 +97,7 @@
       },
       onEachFeature: function (feature, layer) {
         const val = feature.properties.D50.toFixed(2);
-        layer.bindPopup(`<strong>Value:</strong> ${val}`);
+        layer.bindPopup(`<strong>D50 (mm):</strong> ${val}`);
       }
     }).addTo(map);
 
